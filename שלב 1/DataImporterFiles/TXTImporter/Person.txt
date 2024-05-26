@@ -1,1 +1,10 @@
-
+David,Cohen,david.cohen@example.com,050-1234567,12 Herzel Tel Aviv,211854325
+Sarah,Levy,sarah.levy@example.com,050-2345678,34 Dizengof Tel Aviv,233358964
+ Michael,Katz,michael.katz@example.com,050-3456789,56 Ben Yehuda Tel Aviv,311245632   
+ Rachel,Green,rachel.green@example.com,050-4567890,78 Allenby Tel Aviv,155204698  
+Jonathan,Gold,jonathan.gold@example.com,050-5678901,90 Rothschild Tel Aviv,057056412
+David,Shalom,david88@example.com,050-1998767,8 Herzel Jerusalem,221854325
+Michal,Levy, michal.levy@example.com,050-2665678,34 Rakefet Netanya,252158964
+ Noam,Karni,noam56@example.com,050-9776541,16 Ben Yehuda Tel Aviv,322245632   
+ Rachel,Harel, rachel99@example.com,050-777890,8 Allenby Jerusalem,155999698  
+Jonathan,Harush,jonathan33@example.com,050-5699901,90 Rabi Akiva Bnei-Braq,099056412      

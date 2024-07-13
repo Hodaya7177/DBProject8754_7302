@@ -6,12 +6,9 @@ BEGIN
     OPEN v_cursor FOR
     SELECT personid
     FROM (
-        SELECT e.personid, 
-               RANK() OVER (ORDER BY (
-                   SELECT COUNT(*)
-                   FROM System.WorksOn w
-                   WHERE w.employeeid = e.personid
-               ) DESC) AS rank
+        SELECT e.personid,
+               GetEmployeeEventCount(e.personid) AS event_count,
+               RANK() OVER (ORDER BY GetEmployeeEventCount(e.personid) DESC) AS rank
         FROM System.Employee e
         WHERE e.seniority > 2
     )
@@ -19,4 +16,5 @@ BEGIN
 
     RETURN v_cursor;
 END;
+
 

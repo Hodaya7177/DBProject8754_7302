@@ -1,15 +1,14 @@
-CREATE OR REPLACE FUNCTION SumOfTotalDonationsForEvent(p_EventID IN NUMBER) RETURN NUMBER IS
-    v_sum_of_donations NUMBER;
+CREATE OR REPLACE FUNCTION SumOfTotalDonationsForEvent(p_event_id IN NUMBER)
+RETURN NUMBER
+IS
+    v_sum_of_total_donations NUMBER;
 BEGIN
-    -- Function to sum up the total donations for a given event ID
-    SELECT SUM(d.Amount) INTO v_sum_of_donations
-    FROM Donation d
-    JOIN Event e ON d.DonorID = e.DonorID_
-    WHERE e.EventID = p_EventID;
+    SELECT SUM(dn.amount)
+    INTO v_sum_of_total_donations
+    FROM System.Donation dn
+    JOIN System.Participates p ON dn.donorid = p.donorid
+    WHERE p.eventid = p_event_id;
     
-    RETURN v_sum_of_donations;
-EXCEPTION
-    -- Exception handling: if any error occurs, return 0
-    WHEN OTHERS THEN
-        RETURN 0;
-END SumOfTotalDonationsForEvent;
+    RETURN v_sum_of_total_donations;
+END;
+/

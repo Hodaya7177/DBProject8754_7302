@@ -1,0 +1,5 @@
+-- Step 1: Create a directory object (execute this as a user with DBA privileges)
+CREATE OR REPLACE DIRECTORY report_dir AS '/path/to/your/directory';
+
+-- Step 2: Grant read and write privileges on the directory object to your user
+GRANT READ, WRITE ON DIRECTORY report_dir TO your_user;

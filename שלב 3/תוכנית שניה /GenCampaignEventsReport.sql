@@ -1,13 +1,14 @@
-CREATE OR REPLACE PROCEDURE GenCampaignEventsReport IS
-    -- Cursor to fetch all campaigns
-    CURSOR c_campaigns IS
+CREATE OR REPLACE PROCEDURE GenCampaignEventsReport (p_CampaignID NUMBER) IS
+    -- Cursor to fetch the specific campaign
+    CURSOR c_campaign IS
         SELECT CampaignID, CampaignName, StartDate, EndDate
-        FROM Campaign;
+        FROM System.Campaign
+        WHERE CampaignID = p_CampaignID;
         
-    -- Cursor to fetch events for a specific campaign
+    -- Cursor to fetch events for the specific campaign
     CURSOR c_events(p_CampaignID NUMBER) IS
         SELECT EventID, EventDate
-        FROM Event
+        FROM System.Event
         WHERE CampaignID = p_CampaignID;
 
     -- Record type to hold event data
@@ -26,81 +27,77 @@ CREATE OR REPLACE PROCEDURE GenCampaignEventsReport IS
     );
     
     -- Variables to hold record data
-    v_campaigns_record c_campaigns%ROWTYPE;
+    v_campaign_record c_campaign%ROWTYPE;
     v_events_record c_events%ROWTYPE;
 
     v_event_data t_event_record;
     v_campaign_data t_campaign_record;
 
     v_sum_of_donors NUMBER;
-    DonorsMoreThanOneHDollar NUMBER;
+    v_sum_of_donors_more_than_one_dollar NUMBER;
     v_sum_of_total_donations NUMBER;
-    
-    -- Variables for file handling
-    v_file UTL_FILE.FILE_TYPE;
-    v_dir VARCHAR2(30) := 'REPORT_DIR'; -- Directory object name
-    v_filename VARCHAR2(50) := 'campaign_events_report.txt';
+
+    -- Counter for limiting printed events
+    v_event_counter NUMBER := 0;
 
 BEGIN
-    -- Open the file for writing
-    v_file := UTL_FILE.FOPEN(v_dir, v_filename, 'w');
+    -- Write header to the output
+    DBMS_OUTPUT.PUT_LINE('Campaign and Its Related Events Report:');
+    DBMS_OUTPUT.PUT_LINE('-------------------------------------------');
 
-    -- Write header to the file
-    UTL_FILE.PUT_LINE(v_file, 'Campaigns and Their Related Events Report:');
-    UTL_FILE.PUT_LINE(v_file, '-------------------------------------------');
+    -- Open the campaign cursor and fetch the specific campaign
+    OPEN c_campaign;
+    FETCH c_campaign INTO v_campaign_record;
+    IF c_campaign%NOTFOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No campaign found with the given ID.');
+        CLOSE c_campaign;
+        RETURN;
+    END IF;
+    
+    -- Assign campaign data to variables
+    v_campaign_data.CampaignName := v_campaign_record.CampaignName;
+    v_campaign_data.StartDate := v_campaign_record.StartDate;
+    v_campaign_data.EndDate := v_campaign_record.EndDate;
 
-    -- Open the campaigns cursor and loop through each campaign
-    OPEN c_campaigns;
+    -- Write campaign details to the output
+    DBMS_OUTPUT.PUT_LINE('Campaign Name: ' || v_campaign_data.CampaignName);
+    DBMS_OUTPUT.PUT_LINE('Start Date: ' || v_campaign_data.StartDate);
+    DBMS_OUTPUT.PUT_LINE('End Date: ' || v_campaign_data.EndDate);
+
+    -- Open events cursor for the current campaign and loop through each event
+    OPEN c_events(p_CampaignID);
+    v_event_counter := 0; -- Reset the event counter for each campaign
     LOOP
-        FETCH c_campaigns INTO v_campaigns_record;
-        EXIT WHEN c_campaigns%NOTFOUND;
+        FETCH c_events INTO v_events_record;
+        EXIT WHEN c_events%NOTFOUND OR v_event_counter >= 10; -- Limit to 10 events
         
-        -- Assign campaign data to variables
-        v_campaign_data.CampaignName := v_campaigns_record.CampaignName;
-        v_campaign_data.StartDate := v_campaigns_record.StartDate;
-        v_campaign_data.EndDate := v_campaigns_record.EndDate;
+        -- Retrieve and calculate event data using previously defined functions
+        v_sum_of_donors := SumOfDonorsForEvent(v_events_record.EventID);
+        v_sum_of_donors_more_than_one_dollar := SumOfDonorsMoreThanOneHDollar(v_events_record.EventID);
+        v_sum_of_total_donations := SumOfTotalDonationsForEvent(v_events_record.EventID);
+        
+        -- Assign event data to variables
+        v_event_data.EventDate := v_events_record.EventDate;
+        v_event_data.SumOfDonors := v_sum_of_donors;
+        v_event_data.SumOfDonorsMoreThanOneDollar := v_sum_of_donors_more_than_one_dollar;
+        v_event_data.SumOfTotalDonations := v_sum_of_total_donations;
+      
+        -- Write event details to the output
+        DBMS_OUTPUT.PUT_LINE('    Event Date: ' || v_event_data.EventDate);
+        DBMS_OUTPUT.PUT_LINE('    Sum of Donors: ' || v_event_data.SumOfDonors);
+        DBMS_OUTPUT.PUT_LINE('    Sum of Donors (>$1): ' || v_event_data.SumOfDonorsMoreThanOneDollar);
+        DBMS_OUTPUT.PUT_LINE('    Sum of Total Donations: ' || v_event_data.SumOfTotalDonations);
+        DBMS_OUTPUT.PUT_LINE('-------------------------------------------');
 
-        -- Write campaign details to the file
-        UTL_FILE.PUT_LINE(v_file, 'Campaign Name: ' || v_campaign_data.CampaignName);
-        UTL_FILE.PUT_LINE(v_file, 'Start Date: ' || v_campaign_data.StartDate);
-        UTL_FILE.PUT_LINE(v_file, 'End Date: ' || v_campaign_data.EndDate);
-
-        -- Open events cursor for the current campaign and loop through each event
-        OPEN c_events(v_campaigns_record.CampaignID);
-        LOOP
-            FETCH c_events INTO v_events_record;
-            EXIT WHEN c_events%NOTFOUND;
-            
-            -- Retrieve and calculate event data using previously defined functions
-            v_sum_of_donors := SumOfDonorsForEvent(v_events_record.EventID);
-            DonorsMoreThanOneHDollar := SumOfDonorsMoreThanOneHDollar(v_events_record.EventID);
-            v_sum_of_total_donations := SumOfTotalDonationsForEvent(v_events_record.EventID);
-            
-            -- Assign event data to variables
-            v_event_data.EventDate := v_events_record.EventDate;
-            v_event_data.SumOfDonors := v_sum_of_donors;
-            v_event_data.SumOfDonorsMoreThanOneDollar := DonorsMoreThanOneHDollar;
-            v_event_data.SumOfTotalDonations := v_sum_of_total_donations;
-          
-            -- Write event details to the file
-            UTL_FILE.PUT_LINE(v_file, '    Event Date: ' || v_event_data.EventDate);
-            UTL_FILE.PUT_LINE(v_file, '    Sum of Donors: ' || v_event_data.SumOfDonors);
-            UTL_FILE.PUT_LINE(v_file, '    Sum of Donors (>$1): ' || v_event_data.SumOfDonorsMoreThanOneDollar);
-            UTL_FILE.PUT_LINE(v_file, '    Sum of Total Donations: ' || v_event_data.SumOfTotalDonations);
-            UTL_FILE.PUT_LINE(v_file, '-------------------------------------------');
-        END LOOP;
-        CLOSE c_events;  -- Close events cursor after looping through all events for the campaign
+        -- Increment the event counter
+        v_event_counter := v_event_counter + 1;
     END LOOP;
-    CLOSE c_campaigns;  -- Close campaigns cursor after looping through all campaigns
-
-    -- Close the file
-    UTL_FILE.FCLOSE(v_file);
+    CLOSE c_events;  -- Close events cursor after looping through all events for the campaign
+    
+    CLOSE c_campaign;  -- Close campaign cursor
 EXCEPTION
     -- Exception handling: print error message if any error occurs
     WHEN OTHERS THEN
-        -- If an error occurs, close the file if it is open
-        IF UTL_FILE.IS_OPEN(v_file) THEN
-            UTL_FILE.FCLOSE(v_file);
-        END IF;
         DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
 END GenCampaignEventsReport;
+/

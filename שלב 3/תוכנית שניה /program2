@@ -1,0 +1,4 @@
+BEGIN
+    -- קריאה לפרוצדורה שמייצרת את הדו"ח
+    GenCampaignEventsReport;
+END;
